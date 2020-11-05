@@ -5,38 +5,65 @@ import xml.etree.ElementTree as ET
 
 #Translink API https://developer.translink.ca/ServicesRtti/ApiReference
 
-#Defining geographic maxima and minima for Delta and other constants
-latfloor = [49.003192,-123.068576]
-latroof = [49.152959,-122.972304]
-longwest = [49.064212,-123.148544]
-longeast = [49.134125,-122.891214]
+#Defining geographic maxima and minima for Delta
+deltaLatFloor = [49.003192,-123.068576]
+deltaLatRoof = [49.152959,-122.972304]
+deltaLongWest = [49.064212,-123.148544]
+deltaLongEast = [49.134125,-122.891214]
+
+#Defining geographic maxima and minima for Coquitlam
+coquitlamSouthWestLongEast = [49.229598,-122.805961]
+coquitlamSouthWestLongWest = [49.251285,-122.894074]
+coquitlamSouthWestLatFloor = [49.220181,-122.844169]
+coquitlamSouthWestLatRoof = [49.272441,-122.849783]
+coquitlamCenterPoint = [49.268204,-122.821810]
+
+#Bus stop detection radius
 radius = 1000
+currentCity = "COQUITLAM"
 
 #Defines routestop matrix
 routeStopMatrix = []
 routeList = []
 
-#Generates coordinate check queue
+#Generates coordinate delta check queue
 def generateCheckQueue():
     checkQueue = []
-    for i in range (0,10):
+    for i in range (1,10):
+        for j in range (1,10):
+            longp = deltaLongWest[1]+i*0.01
+            latp = deltaLatFloor[0]+j*0.01
+            checkQueue.append([latp,longp])
+    return checkQueue
+
+#Generates coquitlam check queue
+def coqGenerateCheckQueue():
+    checkQueue = []
+    x = float(abs(coquitlamSouthWestLongWest[1] - coquitlamSouthWestLongEast[1])/10.0)
+    y = float(abs(coquitlamSouthWestLatFloor[0] - coquitlamSouthWestLatRoof[1])/10.0)
+    for i in range(0,10):
         for j in range (0,10):
-            longp = longwest[1]+i*0.01
-            latp = latfloor[0]+j*0.01
+            longp = coquitlamSouthWestLongWest[1]+i*x
+            latp = coquitlamSouthWestLatFloor[0]+j*y
             checkQueue.append([latp,longp])
     return checkQueue
 
 #Gets all stops in the XML return from the Translink API
 def getStops(root):
+    global currentCity
     for child in root:
         name = ""
         routes = ""
+        city = ""
         for baby in child:
             if(baby.tag == 'StopNo'):
                 name = baby.text
             if(baby.tag == 'Routes'):
                 routes = baby.text
-            if(routes is not None and name is not None):
+            if(baby.tag == 'City'):
+                print(baby.text)
+                city = baby.text
+            if(routes is not None and name is not None and city==currentCity):
                 if(',' in routes):
                     routes = routes.split(', ')
                     for route in routes:
@@ -103,7 +130,8 @@ def getCoords(stopNumber):
         if(child.tag=='Longitude'):
             lon = child.text
     if(lat==""or lon==""):
-        return [truncate(longwest[0],6),truncate(longwest[1],6)]
+        print("couldn't find stop")
+        return [truncate(coquitlamCenterPoint[0],6),truncate(coquitlamCenterPoint[1],6)]
     lat = float(lat)
     lon = float(lon)
     return [lat, lon]
@@ -209,8 +237,37 @@ def getRouteLength(route):
     return sum
             
 
+#Calculates distance of public transit in South West Coquitlam
+coordinateQueue = coqGenerateCheckQueue()
+http = urllib3.PoolManager()
+radius = 1200#(int(abs(getCoordDistance(coquitlamSouthWestLongEast,coquitlamSouthWestLongWest))*1000/10
+#+abs(getCoordDistance(coquitlamSouthWestLatFloor,coquitlamSouthWestLatRoof))*1000/10))/2
+print("Radius: ",radius,"m")
 
-                
+for coord in coordinateQueue:
+    clat = coord[0]
+    clong = coord[1]
+
+    clat = truncate(clat,6)
+    clong = truncate(clong,6)
+
+    url = 'https://api.translink.ca/rttiapi/v1/stops?apikey=lt7s9J9QzEKRZ3R2oAmM&lat='+str(clat)+'&long='+str(clong)+'&radius='+str(radius)
+    r = http.request('GET',url)
+    root = ET.fromstring(r.data)
+    getStops(root)
+
+sum = 0
+
+for route in routeStopMatrix:
+    print(route)
+    route.reverse()
+    routeNum = route.pop()
+    route = sortStopList(route)
+    sum = sum + getRouteLength(route)
+print("Total Length",sum)
+
+
+""" #Calculates distance of public transit in Delta
 coordinateQueue = generateCheckQueue()
 http = urllib3.PoolManager()
 
@@ -234,4 +291,4 @@ for route in routeStopMatrix:
     print(route)
     sum = sum + getRouteLength(route)
 print("Total Length",sum)
-
+"""
