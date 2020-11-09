@@ -12,11 +12,17 @@ deltaLongWest = [49.064212,-123.148544]
 deltaLongEast = [49.134125,-122.891214]
 
 #Defining geographic maxima and minima for Coquitlam
-coquitlamSouthWestLongEast = [49.229598,-122.805961]
-coquitlamSouthWestLongWest = [49.251285,-122.894074]
-coquitlamSouthWestLatFloor = [49.220181,-122.844169]
-coquitlamSouthWestLatRoof = [49.272441,-122.849783]
+coquitlamLongEast = [49.330606,-122.678321]
+coquitlamLongWest = [49.251285,-122.894074]
+coquitlamLatFloor = [49.220181,-122.844169] 
+coquitlamLatRoof = [49.349397,-122.780631]
 coquitlamCenterPoint = [49.268204,-122.821810]
+
+burnabyLongEast = [49.246689,-122.893283]
+burnabyLongWest = [49.246689,-123.024089]
+burnabyLatFloor = [49.180977,-122.974994]
+burnabyLatRoof = [49.294628,-122.969501]
+burnabyCenterPoint = [49.241982,-122.958515]
 
 #Bus stop detection radius
 radius = 1000
@@ -37,14 +43,14 @@ def generateCheckQueue():
     return checkQueue
 
 #Generates coquitlam check queue
-def coqGenerateCheckQueue():
+def improvedGenerateCheckQueue(longWest,longEast,latRoof,latFloor):
     checkQueue = []
-    x = float(abs(coquitlamSouthWestLongWest[1] - coquitlamSouthWestLongEast[1])/10.0)
-    y = float(abs(coquitlamSouthWestLatFloor[0] - coquitlamSouthWestLatRoof[1])/10.0)
+    x = float(abs(longWest[1] - longEast[1])/10.0)
+    y = float(abs(latFloor[0] - latRoof[0])/10.0)
     for i in range(0,10):
         for j in range (0,10):
-            longp = coquitlamSouthWestLongWest[1]+i*x
-            latp = coquitlamSouthWestLatFloor[0]+j*y
+            longp = longWest[1]+i*x
+            latp = latFloor[0]+j*y
             checkQueue.append([latp,longp])
     return checkQueue
 
@@ -61,7 +67,6 @@ def getStops(root):
             if(baby.tag == 'Routes'):
                 routes = baby.text
             if(baby.tag == 'City'):
-                print(baby.text)
                 city = baby.text
             if(routes is not None and name is not None and city==currentCity):
                 if(',' in routes):
@@ -155,7 +160,7 @@ def getCoordDirection(coordMain, coordComp):
 #Finds the closest stop to the stop at index
 def findClosest(index, stopList):
     currClosIndex = 0
-    currDif = 10000
+    currDif = 10000 
     indexCoords = getCoords(stopList[index])
     direction = ''
     for stop in stopList:
@@ -237,11 +242,11 @@ def getRouteLength(route):
     return sum
             
 
-#Calculates distance of public transit in South West Coquitlam
-coordinateQueue = coqGenerateCheckQueue()
+#Calculates distance of public transit of target City
+coordinateQueue = improvedGenerateCheckQueue(coquitlamLongWest,coquitlamLongEast,coquitlamLatRoof,coquitlamLatFloor)
 http = urllib3.PoolManager()
-radius = 1200#(int(abs(getCoordDistance(coquitlamSouthWestLongEast,coquitlamSouthWestLongWest))*1000/10
-#+abs(getCoordDistance(coquitlamSouthWestLatFloor,coquitlamSouthWestLatRoof))*1000/10))/2
+radius = 2000#(int(abs(getCoordDistance(coquitlamLongEast,coquitlamLongWest))*1000/10
+#+abs(getCoordDistance(coquitlamLatFloor,coquitlamLatRoof))*1000/10))/2
 print("Radius: ",radius,"m")
 
 for coord in coordinateQueue:
@@ -264,7 +269,7 @@ for route in routeStopMatrix:
     routeNum = route.pop()
     route = sortStopList(route)
     sum = sum + getRouteLength(route)
-print("Total Length",sum)
+print("Total Length",sum," in ", currentCity)
 
 
 """ #Calculates distance of public transit in Delta
