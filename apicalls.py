@@ -24,25 +24,28 @@ burnabyLatFloor = [49.180977,-122.974994]
 burnabyLatRoof = [49.294628,-122.969501]
 burnabyCenterPoint = [49.241982,-122.958515]
 
+portCoquitlamLongEast = [49.257915, -122.730194]
+portCoquitlamLongWest = [49.257540, -122.794254]
+portCoquitlamLatFloor = [49.225962, -122.802064]
+portCoquitlamLatRoof = [49.273952, -122.780496]
+portCoquitlamCenterPoint = [49.247530,-122.785727]
+
+portMoodyLongEast = [49.293552,-122.821610]
+portMoodyLongWest = [49.301618,-122.939030]
+portMoodyLatFloor = [49.271082,-122.883398]
+portMoodyLatRoof = [49.329779,-122.880035]
+portMoodyCenterPoint = [49.282889,-122.827340]  
+
+
 #Bus stop detection radius
 radius = 1000
-currentCity = "COQUITLAM"
+currentCity = "PORT MOODY"
 
 #Defines routestop matrix
 routeStopMatrix = []
 routeList = []
 
-#Generates coordinate delta check queue
-def generateCheckQueue():
-    checkQueue = []
-    for i in range (1,10):
-        for j in range (1,10):
-            longp = deltaLongWest[1]+i*0.01
-            latp = deltaLatFloor[0]+j*0.01
-            checkQueue.append([latp,longp])
-    return checkQueue
-
-#Generates coquitlam check queue
+#Generates check queue
 def improvedGenerateCheckQueue(longWest,longEast,latRoof,latFloor):
     checkQueue = []
     x = float(abs(longWest[1] - longEast[1])/10.0)
@@ -136,7 +139,7 @@ def getCoords(stopNumber):
             lon = child.text
     if(lat==""or lon==""):
         print("couldn't find stop")
-        return [truncate(coquitlamCenterPoint[0],6),truncate(coquitlamCenterPoint[1],6)]
+        return [truncate(portMoodyCenterPoint[0],6),truncate(portMoodyCenterPoint[1],6)]
     lat = float(lat)
     lon = float(lon)
     return [lat, lon]
@@ -243,10 +246,9 @@ def getRouteLength(route):
             
 
 #Calculates distance of public transit of target City
-coordinateQueue = improvedGenerateCheckQueue(coquitlamLongWest,coquitlamLongEast,coquitlamLatRoof,coquitlamLatFloor)
+coordinateQueue = improvedGenerateCheckQueue(portMoodyLongWest,portMoodyLongEast,portMoodyLatRoof,portMoodyLatFloor)
 http = urllib3.PoolManager()
-radius = 2000#(int(abs(getCoordDistance(coquitlamLongEast,coquitlamLongWest))*1000/10
-#+abs(getCoordDistance(coquitlamLatFloor,coquitlamLatRoof))*1000/10))/2
+radius = 2000
 print("Radius: ",radius,"m")
 
 for coord in coordinateQueue:
@@ -270,30 +272,3 @@ for route in routeStopMatrix:
     route = sortStopList(route)
     sum = sum + getRouteLength(route)
 print("Total Length",sum," in ", currentCity)
-
-
-""" #Calculates distance of public transit in Delta
-coordinateQueue = generateCheckQueue()
-http = urllib3.PoolManager()
-
-for coord in coordinateQueue:
-    clat = coord[0]
-    clong = coord[1]
-
-    clat = truncate(clat,6)
-    clong = truncate(clong,6)
-
-    url = 'https://api.translink.ca/rttiapi/v1/stops?apikey=lt7s9J9QzEKRZ3R2oAmM&lat='+str(clat)+'&long='+str(clong)+'&radius='+str(radius)
-    r = http.request('GET',url)
-    root = ET.fromstring(r.data)
-    getStops(root)
-    sum = 0
-
-for route in routeStopMatrix:
-    route.reverse()
-    routeNum = route.pop()
-    route = sortStopList(route)
-    print(route)
-    sum = sum + getRouteLength(route)
-print("Total Length",sum)
-"""
