@@ -3,7 +3,12 @@ import math
 import xml.etree.ElementTree as ET
 
 
+
 #Translink API https://developer.translink.ca/ServicesRtti/ApiReference
+
+#########################################
+# Defining geographic minima and maxima #
+#########################################
 
 #Defining geographic maxima and minima for Delta
 deltaLatFloor = [49.003192,-123.068576]
@@ -18,34 +23,39 @@ coquitlamLatFloor = [49.220181,-122.844169]
 coquitlamLatRoof = [49.349397,-122.780631]
 coquitlamCenterPoint = [49.268204,-122.821810]
 
+#Defining geographic maxima and minima for Burnaby
 burnabyLongEast = [49.246689,-122.893283]
 burnabyLongWest = [49.246689,-123.024089]
 burnabyLatFloor = [49.180977,-122.974994]
 burnabyLatRoof = [49.294628,-122.969501]
 burnabyCenterPoint = [49.241982,-122.958515]
 
+#Defining geographic maxima and minima for Port Coquitlam
 portCoquitlamLongEast = [49.257915, -122.730194]
 portCoquitlamLongWest = [49.257540, -122.794254]
 portCoquitlamLatFloor = [49.225962, -122.802064]
 portCoquitlamLatRoof = [49.273952, -122.780496]
 portCoquitlamCenterPoint = [49.247530,-122.785727]
 
+#Defining geographic maxima and minima for Port Moody
 portMoodyLongEast = [49.293552,-122.821610]
 portMoodyLongWest = [49.301618,-122.939030]
 portMoodyLatFloor = [49.271082,-122.883398]
 portMoodyLatRoof = [49.329779,-122.880035]
 portMoodyCenterPoint = [49.282889,-122.827340]  
 
+#########################################
+#        Defining global arrays         #
+#########################################
 
-#Bus stop detection radius
-radius = 1000
-currentCity = "PORT MOODY"
-
-#Defines routestop matrix
 routeStopMatrix = []
 routeList = []
 
-#Generates check queue
+#########################################
+#        Defining all functions         #
+#########################################
+
+#Generates a list of coordiantes to check within the specified coordinate area
 def improvedGenerateCheckQueue(longWest,longEast,latRoof,latFloor):
     checkQueue = []
     x = float(abs(longWest[1] - longEast[1])/10.0)
@@ -57,7 +67,7 @@ def improvedGenerateCheckQueue(longWest,longEast,latRoof,latFloor):
             checkQueue.append([latp,longp])
     return checkQueue
 
-#Gets all stops in the XML return from the Translink API
+#Gets all bus stops in the XML return from the Translink API
 def getStops(root):
     global currentCity
     for child in root:
@@ -93,7 +103,7 @@ def getStops(root):
                     if(notInMatrix):
                         routeStopMatrix.append([routes,name])
 
-#Gets a list of routes from the root
+#Gets a list of routes from the root in the XML file
 def getRoutes(root):
     for child in root:
         for baby in child:
@@ -124,7 +134,7 @@ def generateRoute(routeNumber):
             routeStopMatrix.remove(pair)
     return routeStopList
 
-#Gets coords for a stopNumber
+#Gets the coordinates associated with a stopNumber
 def getCoords(stopNumber):
     http = urllib3.PoolManager()
     url = 'https://api.translink.ca/rttiapi/v1/stops/'+str(stopNumber)+'?apikey=lt7s9J9QzEKRZ3R2oAmM'
@@ -160,10 +170,10 @@ def getCoordDirection(coordMain, coordComp):
     else:
         return 'left'
 
-#Finds the closest stop to the stop at index
+#Finds the closest stop to the stop at the specified index
 def findClosest(index, stopList):
     currClosIndex = 0
-    currDif = 10000 
+    currDif = math.inf 
     indexCoords = getCoords(stopList[index])
     direction = ''
     for stop in stopList:
@@ -208,7 +218,7 @@ def sortStopList(stopList):
                 newList.insert(len(newList)-1,temp)
     return newList
 
-#Uses Harversine formula to calculate the km distance between two coords
+#Uses the Harversine formula to calculate the km distance between two coords
 #Code source: http://www.movable-type.co.uk/scripts/latlong.html
 def getCoordDistance(coord1, coord2):
     r = 6371e3
@@ -231,7 +241,7 @@ def getCoordDistance(coord1, coord2):
 
 
 
-    #Returns the route's length in km
+#Returns the route's length in km
 def getRouteLength(route):
     prev = ""
     sum = 0
@@ -243,14 +253,23 @@ def getRouteLength(route):
         prev = stop
 
     return sum
-            
 
-#Calculates distance of public transit of target City
-coordinateQueue = improvedGenerateCheckQueue(portMoodyLongWest,portMoodyLongEast,portMoodyLatRoof,portMoodyLatFloor)
+
+#Defining params
+currentCity = "PORT COQUITLAM"
 http = urllib3.PoolManager()
 radius = 2000
+currentLongWest = portCoquitlamLongWest
+currentLongEast = portCoquitlamLongEast
+currentLatRoof = portCoquitlamLatRoof
+currentLatFloor = portCoquitlamLatFloor
+
+#Generating coordinate queue
+coordinateQueue = improvedGenerateCheckQueue(currentLongWest,currentLongEast,currentLatRoof,currentLatFloor)
+
 print("Radius: ",radius,"m")
 
+#Iterating through coordinate queue to identify nearby bus stops
 for coord in coordinateQueue:
     clat = coord[0]
     clong = coord[1]
@@ -265,10 +284,13 @@ for coord in coordinateQueue:
 
 sum = 0
 
+#Iterating through routes to sum their distance
 for route in routeStopMatrix:
     print(route)
     route.reverse()
     routeNum = route.pop()
     route = sortStopList(route)
     sum = sum + getRouteLength(route)
+
 print("Total Length",sum," in ", currentCity)
+
